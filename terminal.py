@@ -474,6 +474,17 @@ class App(tk.Tk):
         )
         self.v_drive.set(escolhido or (textos[0] if textos else "(nenhum pendrive detectado)"))
 
+    def _auto_atualizar_drives(self):
+        """Na tela de gravação, atualiza a lista sozinho quando um pendrive entra ou sai."""
+        atuais = gravador.listar_pendrives()
+        if [d["caminho"] for d in atuais] == [d["caminho"] for d in self.drives]:
+            return
+        selecionado = next(
+            (d["caminho"] for d in self.drives if gravador.descrever(d) == self.v_drive.get()),
+            None,
+        )
+        self._atualizar_drives(manter=selecionado)
+
     def grav_gravar(self):
         item = next((d for d in self.drives if gravador.descrever(d) == self.v_drive.get()), None)
         if item is None:
@@ -793,6 +804,8 @@ class App(tk.Tk):
         try:
             self.contador += 1
             m = self.missao
+            if self.contador % 5 == 0 and self.f_grav.winfo_ismapped():
+                self._auto_atualizar_drives()
             if m:
                 if self.contador % 3 == 0:  # lê os pendrives ~ a cada 0,6 s
                     if self.f_grav.winfo_ismapped():  # gravando pendrives: não conta como inserção
