@@ -54,6 +54,7 @@ remover() {
     rm -f "$RAIZ/etc/systemd/system/getty@tty1.service.d/autologin.conf"
     rmdir "$RAIZ/etc/systemd/system/getty@tty1.service.d" 2> /dev/null || true
     rm -f "$RAIZ/etc/systemd/logind.conf.d/terminal-missao.conf"
+    rm -f "$RAIZ/etc/polkit-1/rules.d/50-terminal-missao.rules"
     limpar_bloco "$HOME_U/.bash_profile"
     rm -f "$HOME_U/.quiosque-sessao.sh"
     rodar systemctl unmask sleep.target suspend.target hibernate.target hybrid-sleep.target
@@ -67,7 +68,7 @@ instalar_pacotes() {
     rodar apt-get install -y --no-install-recommends \
         xserver-xorg-core xserver-xorg-input-libinput xinit x11-xserver-utils openbox \
         python3 python3-tk fonts-dejavu-core alsa-utils \
-        udisks2 udiskie dbus libpam-systemd
+        udisks2 udiskie dbus libpam-systemd polkitd
     # esconde o cursor do mouse quando parado (opcional)
     rodar apt-get install -y --no-install-recommends unclutter-xfixes \
         || rodar apt-get install -y --no-install-recommends unclutter \
@@ -150,6 +151,19 @@ EOF
     rodar systemctl daemon-reload
 }
 
+configurar_polkit() {
+    info "Liberando a montagem de pendrives para $USUARIO"
+    local pasta="$RAIZ/etc/polkit-1/rules.d"
+    mkdir -p "$pasta"
+    cat > "$pasta/50-terminal-missao.rules" <<EOF
+polkit.addRule(function(action, subject) {
+    if (subject.user == "$USUARIO" && action.id.indexOf("org.freedesktop.udisks2.") == 0) {
+        return polkit.Result.YES;
+    }
+});
+EOF
+}
+
 configurar_energia() {
     info "Desativando a suspensão (tampa fechada, inatividade)"
     mkdir -p "$RAIZ/etc/systemd/logind.conf.d"
@@ -192,6 +206,7 @@ copiar_projeto
 escrever_sessao
 escrever_perfil
 configurar_autologin
+configurar_polkit
 configurar_energia
 ajustar_som
 if [ "$SEM_GRUB" != 1 ]; then
