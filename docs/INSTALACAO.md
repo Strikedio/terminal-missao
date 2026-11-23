@@ -38,7 +38,7 @@ Sem internet no notebook? Copie a pasta do projeto por pendrive. O script só pr
 | Programa | copiado para `~/terminal-missao` |
 | Login automático | no console 1, sem pedir senha |
 | Início | `startx` abre o Terminal de Missão em tela cheia; se o programa travar ele reinicia sozinho |
-| Permissões | regra polkit para o seu usuário montar pendrives sem senha |
+| Permissões | regra polkit (formatos novo e antigo) para o seu usuário montar pendrives sem senha |
 | Energia | fechar a tampa não suspende; tela nunca apaga |
 | GRUB | espera 2 s e boot silencioso (`--sem-grub` para não mexer; backup em `/etc/default/grub.bak-missao`) |
 | Som | volume em 90% e sem mudo |

@@ -55,6 +55,7 @@ remover() {
     rmdir "$RAIZ/etc/systemd/system/getty@tty1.service.d" 2> /dev/null || true
     rm -f "$RAIZ/etc/systemd/logind.conf.d/terminal-missao.conf"
     rm -f "$RAIZ/etc/polkit-1/rules.d/50-terminal-missao.rules"
+    rm -f "$RAIZ/etc/polkit-1/localauthority/50-local.d/50-terminal-missao.pkla"
     limpar_bloco "$HOME_U/.bash_profile"
     rm -f "$HOME_U/.quiosque-sessao.sh"
     rodar systemctl unmask sleep.target suspend.target hibernate.target hybrid-sleep.target
@@ -68,7 +69,10 @@ instalar_pacotes() {
     rodar apt-get install -y --no-install-recommends \
         xserver-xorg-core xserver-xorg-input-libinput xinit x11-xserver-utils openbox \
         python3 python3-tk fonts-dejavu-core alsa-utils \
-        udisks2 udiskie dbus libpam-systemd polkitd
+        udisks2 udiskie dbus libpam-systemd
+    # o pacote de permissões se chama polkitd no Debian 13 e policykit-1 em Ubuntu/Armbian antigos
+    rodar apt-get install -y --no-install-recommends polkitd \
+        || rodar apt-get install -y --no-install-recommends policykit-1
     # esconde o cursor do mouse quando parado (opcional)
     rodar apt-get install -y --no-install-recommends unclutter-xfixes \
         || rodar apt-get install -y --no-install-recommends unclutter \
@@ -153,6 +157,7 @@ EOF
 
 configurar_polkit() {
     info "Liberando a montagem de pendrives para $USUARIO"
+    # polkit novo (Debian 13): regra em JavaScript
     local pasta="$RAIZ/etc/polkit-1/rules.d"
     mkdir -p "$pasta"
     cat > "$pasta/50-terminal-missao.rules" <<EOF
@@ -161,6 +166,17 @@ polkit.addRule(function(action, subject) {
         return polkit.Result.YES;
     }
 });
+EOF
+    # polkit antigo (Ubuntu 20.04 / Armbian): arquivo .pkla
+    local antigo="$RAIZ/etc/polkit-1/localauthority/50-local.d"
+    mkdir -p "$antigo"
+    cat > "$antigo/50-terminal-missao.pkla" <<EOF
+[Montagem de pendrives - Terminal de Missao]
+Identity=unix-user:$USUARIO
+Action=org.freedesktop.udisks2.*
+ResultAny=yes
+ResultInactive=yes
+ResultActive=yes
 EOF
 }
 
