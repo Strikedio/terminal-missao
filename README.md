@@ -59,6 +59,11 @@ No painel F12, o campo **Duração da missão, em minutos** (0 a 180) define qua
 
 O cronômetro vira contagem regressiva sempre que há duração definida.
 
+### Som da contagem regressiva
+
+Nos últimos 10 segundos o terminal apita: de 10 a 5 s, **1 bip por segundo**; de 5 a 3 s, **2 por segundo**; de 3 a 0 s, **3 por segundo**.
+Se a contagem chegar a zero, termina sempre com uma **explosão**. Se os operadores vencerem antes (por exemplo, desarmar a tempo), o som é o de vitória.
+
 ## Pendrives
 
 Cada pendrive de missão tem na raiz um arquivo **`pendrive.key`** com o nome dele: `ALFA`, `BRAVO`, `CHARLIE`, `DELTA`,

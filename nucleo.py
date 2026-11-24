@@ -16,6 +16,20 @@ NOMES_PENDRIVES = ["ALFA", "BRAVO", "CHARLIE", "DELTA", "ECO", "FOXTROT", "GOLF"
 EQUIPES = ("VERMELHO", "AZUL")  # pendrives do modo "controle"
 MODOS = ("campanha", "hacking", "coleta", "desarme", "decifrar", "download", "defesa", "controle")
 FINAIS = ("DESARMADO", "DETONADO", "FALHOU", "CONCLUIDO")
+# Instantes (tempo restante, em ns) dos bips da contagem regressiva final:
+# de 10 a 5 s: 1 bip por segundo; de 5 a 3 s: 2 por segundo; de 3 a 0 s: 3 por segundo.
+LIMIARES_BIP_NS = (
+    [s * NS for s in (10, 9, 8, 7, 6, 5)]
+    + [int(s * NS) for s in (4.5, 4, 3.5, 3)]
+    + [3 * NS - i * NS // 3 for i in range(1, 9)]
+)
+
+
+def bips_devidos(restante_ns):
+    """Quantos bips da contagem final já deveriam ter soado quando faltam `restante_ns`."""
+    return sum(1 for t in LIMIARES_BIP_NS if restante_ns <= t)
+
+
 DURACAO_MAX_S = 180 * 60  # duração máxima que o organizador pode definir (3 horas)
 PENALIDADE_NS = 15 * NS  # tempo perdido a cada erro no desarme
 PALAVRAS = [

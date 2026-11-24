@@ -22,7 +22,7 @@ import tkinter as tk
 import gravador
 import leitor_usb
 import sons
-from nucleo import FINAIS, MODOS, NS, PERFIS, Config, Missao
+from nucleo import FINAIS, MODOS, NS, PERFIS, Config, Missao, bips_devidos
 
 PASTA = os.path.dirname(os.path.abspath(__file__))
 ARQ_CFG = os.path.join(PASTA, "config.json")
@@ -119,7 +119,7 @@ class App(tk.Tk):
         self.presentes_reais = set()
         self.sim_presentes = set()
         self.contador = 0
-        self.ultimo_seg = None
+        self.bips_feitos = 0
         self.overlay = None
         self.admin_ate = 0
         self.cod_visivel = True
@@ -711,7 +711,7 @@ class App(tk.Tk):
         )
         self.final = False
         self.som_fim_tocado = False
-        self.ultimo_seg = None
+        self.bips_feitos = 0
         self.sim_presentes.clear()
         self.monitor = leitor_usb.Monitor()  # o que já está plugado não conta como inserção
         try:
@@ -830,7 +830,6 @@ class App(tk.Tk):
                     m.verificar_tempo()
                     self._drenar_eventos()
                 self._atualizar_tela()
-                self._beep_contagem()
                 if m.estado in FINAIS and not self.final:
                     self._finalizar()
         except Exception as e:  # o jogo nunca pode travar em campo
@@ -847,6 +846,7 @@ class App(tk.Tk):
                 seg, resto = divmod(ns, NS)
                 self.l_tempo.config(text=f"{seg // 60:02d}:{seg % 60:02d}")
                 self.l_nano.config(text=f".{resto:09d}")
+                self._beep_contagem()  # aqui (60x por segundo) para os bips saírem no ritmo certo
                 if self.final:
                     cor = VERDE if m.estado in ("DESARMADO", "CONCLUIDO") else VERM
                     legenda = "CRONÔMETRO PARADO"
@@ -897,18 +897,20 @@ class App(tk.Tk):
             return
         ns, regressivo = m.cronometro()
         if regressivo:
-            seg = ns // NS
-            if seg != self.ultimo_seg and seg <= 10:
-                sons.tocar("beep")
-            self.ultimo_seg = seg
+            devidos = bips_devidos(ns)
+            if devidos > self.bips_feitos:
+                sons.tocar("beep")  # um só bip, mesmo que o relógio tenha pulado (penalidade)
+            self.bips_feitos = devidos
 
     def _finalizar(self):
         self.final = True
         m = self.missao
         som, tag = self._som_e_tag("")
+        ns, regressivo = m.cronometro()
+        if regressivo and ns == 0:
+            som = "explosao"  # a contagem regressiva sempre termina em explosão
         if not self.som_fim_tocado:  # se o fim veio de uma ação, o som já tocou
             sons.tocar(som)
-        ns, _ = m.cronometro()
         self.registrar(
             "SISTEMA",
             f"FIM DA MISSÃO: {m.msg_final or m.estado} | cronômetro parado em "

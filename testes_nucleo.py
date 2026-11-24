@@ -2,7 +2,7 @@
 
 import random
 
-from nucleo import NS, Config, Missao, cesar
+from nucleo import LIMIARES_BIP_NS, NS, Config, Missao, bips_devidos, cesar
 
 
 class Rel:
@@ -257,6 +257,21 @@ def test_duracao_da_missao():
             raise AssertionError("deveria recusar")
         except ValueError:
             pass
+
+
+def test_ritmo_dos_bips():
+    assert len(LIMIARES_BIP_NS) == 18 and LIMIARES_BIP_NS == sorted(LIMIARES_BIP_NS, reverse=True)
+
+    def bips_entre(de, ate):  # bips que soam enquanto o tempo restante vai de `de` a `ate` segundos
+        return bips_devidos(int(ate * NS)) - bips_devidos(int(de * NS))
+
+    assert bips_devidos(11 * NS) == 0  # antes dos 10 s: silêncio
+    assert bips_entre(10.01, 5.01) == 5  # 10 a 5 s: 1 por segundo
+    assert bips_entre(5.01, 3.01) == 4  # 5 a 3 s: 2 por segundo
+    assert bips_entre(3.01, 0) == 9  # 3 a 0 s: 3 por segundo
+    for seg in (2, 1):  # cada segundo final tem 3 bips
+        assert bips_entre(seg + 0.001, seg - 0.999) == 3
+    assert bips_devidos(0) == 18
 
 
 if __name__ == "__main__":
