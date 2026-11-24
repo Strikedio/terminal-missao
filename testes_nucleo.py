@@ -209,6 +209,56 @@ def test_validacao():
         assert m.painel()["info"] is not None and m.resumo_admin()
 
 
+def test_duracao_da_missao():
+    for modo in ("hacking", "coleta", "decifrar"):  # sem prazo próprio: a duração vira o prazo
+        r = Rel()
+        m = nova(r, modo=modo, duracao_s=600, codigo_hack="1234" if modo == "hacking" else "")
+        ns, regressivo = m.cronometro()
+        assert regressivo and ns == 600 * NS, modo
+        r.passa(601)
+        m.verificar_tempo()
+        assert m.estado == "FALHOU" and m.msg_final == "TEMPO ESGOTADO", modo
+        assert m.cronometro() == (0, True)  # o cronômetro para quando a missão acaba
+    r = Rel()  # sem duração, esses modos continuam sem prazo
+    m = nova(r, modo="coleta")
+    r.passa(9999)
+    m.verificar_tempo()
+    assert m.estado == "COLETA" and m.cronometro()[1] is False
+    r = Rel()  # campanha: um prazo só para a missão inteira
+    m = nova(r, codigo_hack="1234", duracao_s=300)
+    r.passa(100)
+    m.tentar_codigo("1234")
+    assert m.estado == "DESARME" and m.cronometro() == (200 * NS, True)  # não reinicia o relógio
+    r.passa(201)
+    m.verificar_tempo()
+    assert m.estado == "DETONADO"
+    r = Rel()  # desarme sozinho, download e defesa usam a duração como tempo total
+    assert nova(r, modo="desarme", duracao_s=90).cronometro() == (90 * NS, True)
+    assert nova(r, modo="download", duracao_s=120).cronometro() == (120 * NS, True)
+    assert nova(r, modo="defesa", duracao_s=240).cronometro() == (240 * NS, True)
+    r = Rel()  # controle: acabou o tempo, vence quem segurou o ponto por mais tempo
+    m = nova(r, modo="controle", duracao_s=120, perfil="elite")
+    m.definir_presentes(["AZUL"])
+    for _ in range(20):
+        r.passa(1)
+        m.verificar_tempo()
+    m.definir_presentes([])
+    r.passa(200)
+    m.verificar_tempo()
+    assert m.estado == "CONCLUIDO" and m.vencedor == "AZUL" and "AZUL" in m.msg_final
+    r = Rel()
+    m = nova(r, modo="controle", duracao_s=60)
+    r.passa(61)
+    m.verificar_tempo()
+    assert m.estado == "CONCLUIDO" and m.msg_final == "EMPATE" and m.vencedor is None
+    for ruim in (-1, 180 * 60 + 1):
+        try:
+            Config(duracao_s=ruim)
+            raise AssertionError("deveria recusar")
+        except ValueError:
+            pass
+
+
 if __name__ == "__main__":
     testes = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for t in testes:

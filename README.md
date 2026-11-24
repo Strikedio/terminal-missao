@@ -36,13 +36,28 @@ A senha inicial é **`admin`**. **Troque-a no painel F12** antes de jogar. F5 e 
 
 ### Painel F12
 
-Escolha de modo, dificuldade, quantidade de pendrives, código de hack, chave e tempo; nova senha; e os botões:
+Escolha de modo, dificuldade, quantidade de pendrives, código de hack, chave, **duração da missão**; nova senha; e os botões:
 
 - **GRAVAR PENDRIVES**: tela para preparar os pendrives (veja abaixo);
 - **SIMULAR PENDRIVE (F5)** e **AVANÇAR ETAPA (F6)**;
 - **ABORTAR MISSÃO** e **VOLTAR**;
 - **DESLIGAR NOTEBOOK** (só no Linux; pede 2 cliques em até 5 s);
 - **SAIR DO PROGRAMA**.
+
+### Duração da missão
+
+No painel F12, o campo **Duração da missão, em minutos** (0 a 180) define quanto tempo a missão dura. Com **0** vale o padrão da dificuldade.
+
+| Modo | O que acontece quando o tempo acaba |
+|------|--------------------------------------|
+| `hacking`, `coleta`, `decifrar` | A missão **falha** (TEMPO ESGOTADO) |
+| `campanha` | Prazo único para as três etapas, contado desde o início; se acabar durante o desarme, **detona** |
+| `desarme` | Detona |
+| `download` | Falha, se a transferência não terminou |
+| `defesa` | Vitória: o servidor resistiu |
+| `controle` | Vence quem segurou o ponto por mais tempo (ou empate) |
+
+O cronômetro vira contagem regressiva sempre que há duração definida.
 
 ## Pendrives
 

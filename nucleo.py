@@ -16,6 +16,7 @@ NOMES_PENDRIVES = ["ALFA", "BRAVO", "CHARLIE", "DELTA", "ECO", "FOXTROT", "GOLF"
 EQUIPES = ("VERMELHO", "AZUL")  # pendrives do modo "controle"
 MODOS = ("campanha", "hacking", "coleta", "desarme", "decifrar", "download", "defesa", "controle")
 FINAIS = ("DESARMADO", "DETONADO", "FALHOU", "CONCLUIDO")
+DURACAO_MAX_S = 180 * 60  # duração máxima que o organizador pode definir (3 horas)
 PENALIDADE_NS = 15 * NS  # tempo perdido a cada erro no desarme
 PALAVRAS = [
     "ESCUDO",
@@ -92,6 +93,7 @@ class Config:
     codigo_hack: str = ""  # vazio = sorteia (4 dígitos; palavra no modo decifrar)
     chave: int = 0  # chave da cifra (modo decifrar); 0 = sorteia
     tempo_s: int = 0  # 0 = padrão do perfil; senão: tempo/meta em segundos
+    duracao_s: int = 0  # duração total da missão em segundos (0 = padrão da dificuldade)
 
     def __post_init__(self):
         if self.modo not in MODOS:
@@ -104,6 +106,8 @@ class Config:
             raise ValueError("A chave da cifra deve ser de 0 a 25.")
         if not 0 <= self.tempo_s <= 3600:
             raise ValueError("O tempo deve ser de 0 a 3600 segundos.")
+        if not 0 <= self.duracao_s <= DURACAO_MAX_S:
+            raise ValueError("A duração deve ser de 0 a 180 minutos.")
         self.codigo_hack = (self.codigo_hack or "").strip().upper()
         if self.modo == "decifrar":
             if not self.codigo_hack:
@@ -190,7 +194,7 @@ class Missao:
     # ---------- controle da missão ----------
     def iniciar(self):
         self.t0 = self._ultimo = agora = self.relogio()
-        m, tempo = self.cfg.modo, self.cfg.tempo_s
+        m, tempo = self.cfg.modo, self.cfg.duracao_s or self.cfg.tempo_s
         if m in ("campanha", "hacking"):
             self._set("HACKING")
         elif m == "decifrar":
@@ -211,11 +215,18 @@ class Missao:
             self._agendar(agora)
         elif m == "controle":
             self._set("CONTROLE")
+        if self.cfg.duracao_s and self.fim is None:
+            # hacking, decifrar, coleta, controle e campanha: prazo total da missão
+            self.fim = agora + self.cfg.duracao_s * NS
 
     def _iniciar_desarme(self):
         self._set("DESARME")
         self.progresso = []
-        total = self.cfg.tempo_s or self.p["seg_por_pendrive"] * len(self.nomes)
+        if self.cfg.modo == "campanha" and self.cfg.duracao_s:
+            return  # na campanha o prazo é um só, contado desde o início da missão
+        total = (
+            self.cfg.duracao_s or self.cfg.tempo_s or self.p["seg_por_pendrive"] * len(self.nomes)
+        )
         self.fim = self.relogio() + total * NS
 
     def verificar_tempo(self):
@@ -234,6 +245,11 @@ class Missao:
             elif self.estado == "DEFESA":
                 self._fim("CONCLUIDO", "DEFESA BEM-SUCEDIDA")
                 self.eventos.append(("Tempo cumprido. SERVIDOR PROTEGIDO!", "vitoria"))
+            elif self.estado == "CONTROLE":
+                self._fim_controle_por_tempo()
+            else:  # hacking, decifrar, coleta
+                self._fim("FALHOU", "TEMPO ESGOTADO")
+                self.eventos.append(("Tempo esgotado. Missão fracassada.", "explosao"))
             return
         if self.estado == "DOWNLOAD":
             self._tick_download(dt)
@@ -434,6 +450,19 @@ class Missao:
                 self.vencedor = self.dono
                 self._fim("CONCLUIDO", f"{self.dono} DOMINOU O PONTO")
                 self.eventos.append((f"{self.dono} atingiu a meta e DOMINOU O PONTO!", "vitoria"))
+
+    def _fim_controle_por_tempo(self):
+        """Acabou o tempo no modo controle: vence quem acumulou mais tempo com o ponto."""
+        v, a = self.acum_eq["VERMELHO"], self.acum_eq["AZUL"]
+        if v == a:
+            self._fim("CONCLUIDO", "EMPATE")
+            self.eventos.append(("Tempo esgotado. EMPATE!", "alarme"))
+            return
+        self.vencedor = "VERMELHO" if v > a else "AZUL"
+        self._fim("CONCLUIDO", f"{self.vencedor} DOMINOU O PONTO")
+        self.eventos.append(
+            (f"Tempo esgotado. {self.vencedor} controlou o ponto por mais tempo!", "vitoria")
+        )
 
     # ---------- ação manual do organizador (falha na porta USB, etc.) ----------
     def avancar_etapa(self):

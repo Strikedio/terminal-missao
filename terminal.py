@@ -34,6 +34,7 @@ PADRAO = {
     "codigo_hack": "",
     "chave": 0,
     "tempo_s": 0,
+    "duracao_min": 0,
     "senha": "admin",
 }
 GRACA_ADMIN_S = 60  # depois de digitar a senha, F5/F6 não pedem de novo por 60 s
@@ -260,6 +261,7 @@ class App(tk.Tk):
         self.v_codigo = tk.StringVar()
         self.v_chave = tk.IntVar(value=0)
         self.v_tempo = tk.IntVar(value=0)
+        self.v_duracao = tk.IntVar(value=0)
         self.v_senha = tk.StringVar()
 
         def linha(r, texto, widget):
@@ -318,7 +320,12 @@ class App(tk.Tk):
             "Tempo ou meta, em segundos\n(0 = padrão da dificuldade):",
             contador(self.v_tempo, 0, 3600, 10),
         )
-        linha(6, "Nova senha (vazio = manter):", entrada(self.v_senha, show="*"))
+        linha(
+            6,
+            "Duração da missão, em minutos\n(0 = padrão da dificuldade):",
+            contador(self.v_duracao, 0, 180, 1),
+        )
+        linha(7, "Nova senha (vazio = manter):", entrada(self.v_senha, show="*"))
 
         self.l_admin_info = tk.Label(
             fr, text="", bg=BG, fg=AMBAR, font=self.f(0.9, False), justify="left"
@@ -512,6 +519,7 @@ class App(tk.Tk):
         self.v_codigo.set(c["codigo_hack"])
         self.v_chave.set(c["chave"])
         self.v_tempo.set(c["tempo_s"])
+        self.v_duracao.set(c["duracao_min"])
         self.v_senha.set("")
         self._atualizar_info_admin()
 
@@ -610,6 +618,7 @@ class App(tk.Tk):
                 "codigo_hack": self.v_codigo.get().strip().upper(),
                 "chave": int(self.v_chave.get()),
                 "tempo_s": int(self.v_tempo.get()),
+                "duracao_min": int(self.v_duracao.get()),
                 "senha": self.v_senha.get() or self.cfg["senha"],
             }
             Config(
@@ -619,6 +628,7 @@ class App(tk.Tk):
                 codigo_hack=novo["codigo_hack"],
                 chave=novo["chave"],
                 tempo_s=novo["tempo_s"],
+                duracao_s=novo["duracao_min"] * 60,
             )  # só valida
             if len(novo["senha"]) < 4:
                 raise ValueError("A senha deve ter pelo menos 4 caracteres.")
@@ -696,6 +706,7 @@ class App(tk.Tk):
                 codigo_hack=c["codigo_hack"],
                 chave=c["chave"],
                 tempo_s=c["tempo_s"],
+                duracao_s=int(c["duracao_min"]) * 60,
             )
         )
         self.final = False
